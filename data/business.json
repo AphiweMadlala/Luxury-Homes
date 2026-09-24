@@ -1,0 +1,50 @@
+{
+  "name": "Luxury Homes South Africa",
+  "instagramDisplayName": "Luxury Real Estate & Design",
+  "instagram": {
+    "handle": "luxuryhomes_southafrica",
+    "url": "https://www.instagram.com/luxuryhomes_southafrica/",
+    "followers": 67333,
+    "posts": 445,
+    "verified": true
+  },
+  "youtube": {
+    "handle": "LuxuryHomesSouthAfrica",
+    "url": "https://www.youtube.com/@LuxuryHomesSouthAfrica",
+    "subscribers": 28400,
+    "joined": "2020-09-28"
+  },
+  "bio": "A Collection of the Most Exquisite #Homes represented by the Who’s Who in Real Estate, Architecture, and Design. \nFor Features Dm or Email\n⬇️Explore",
+  "channelDescription": "A collection of the most exquisite homes, represented by the Who’s Who in real estate, architecture, and design. From extraordinary properties on the market to visionary projects shaping South Africa’s future — we bring luxury to life without compromise.\n\nIf you’d like to feature your listing, project, or design with us, get in touch:\n\n📩 Media@cacoongroup.com\n📞 WhatsApp/Call: +27 61 451 7308",
+  "operator": {
+    "name": "Cacoon Group",
+    "evidence": "All caption contact emails use the @cacoongroup.com domain; YouTube channel links the Cacoon Group Facebook page."
+  },
+  "people": [
+    {
+      "name": "Mbuyelo Rathidili",
+      "role": "Founder",
+      "instagram": "mbuyelo_rathidili",
+      "source": "https://www.youtube.com/watch?v=vd5nyqJz9Fc"
+    },
+    {
+      "name": "Boitumelo Mokonyane Studio",
+      "role": "Producer",
+      "instagram": "boitumelo_mokonyane_studio",
+      "source": "https://www.youtube.com/watch?v=vd5nyqJz9Fc"
+    }
+  ],
+  "contact": {
+    "email": "media@cacoongroup.com",
+    "generalEmail": "info@cacoongroup.com",
+    "phone": "+27 61 451 7308",
+    "phoneHref": "+27614517308",
+    "whatsapp": true,
+    "sources": [
+      "YouTube channel description (Sep 2026)",
+      "Instagram captions 2025–2026 (info@cacoongroup.com)"
+    ]
+  },
+  "featureInvitation": "If you’d like to feature your listing, project, or design with us, get in touch.",
+  "verifiedAt": "2026-09-24"
+}

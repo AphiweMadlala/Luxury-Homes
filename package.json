@@ -1,0 +1,18 @@
+{
+  "name": "luxury-homes-south-africa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "data": "node scripts/build-data.mjs",
+    "media": "node scripts/build-data.mjs && node scripts/build-media.mjs && node scripts/build-data.mjs",
+    "validate": "node scripts/validate.mjs",
+    "build": "node scripts/build-data.mjs && node scripts/validate.mjs && node scripts/build-site.mjs",
+    "build:pages": "BASE=/Luxury-Homes/ npm run build",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "@phosphor-icons/core": "^2.1.1",
+    "axe-core": "^4.13.0",
+    "sharp": "^0.34.5"
+  }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "sam-harwood",
+    "name": "Sam Harwood",
+    "role": "Managing Director",
+    "agency": "The Storey Real Estate",
+    "phone": "+27 78 013 0027",
+    "email": "sam@thestorey.co.za",
+    "instagram": null,
+    "sourceUrls": [
+      "https://thestorey.co.za/properties/for-sale-in-sibaya-precinct-kwazulu-natal-2438bda1-671e-487d-94ab-c0fd2dfd85f9"
+    ]
+  },
+  {
+    "id": "robert-baron-jones",
+    "name": "Robert Baron Jones",
+    "role": "Qualified Property Practitioner",
+    "agency": "Chas Everitt International — Waterfall",
+    "phone": "+27 61 536 5342",
+    "email": "robert.j@everitt.co.za",
+    "instagram": "robertbaron_jones",
+    "sourceUrls": [
+      "https://www.chaseveritt.co.za/results/residential/for-sale/midrand/blue-hills-equestrian-estate/house/2960778/"
+    ]
+  },
+  {
+    "id": "tina-de-waal",
+    "name": "Tina de Waal",
+    "role": "Qualified Principal Property Practitioner",
+    "agency": "Chas Everitt International — Waterfall",
+    "phone": "+27 83 771 8709",
+    "email": "tina.dw@everitt.co.za",
+    "instagram": "tinachaseveritt",
+    "sourceUrls": [
+      "https://www.chaseveritt.co.za/results/residential/for-sale/midrand/blue-hills-equestrian-estate/house/2960778/"
+    ]
+  },
+  {
+    "id": "michael-maingard",
+    "name": "Michael Maingard",
+    "role": "Property Practitioner",
+    "agency": "Greeff Christie's International Real Estate",
+    "phone": "+27 82 497 7888",
+    "email": "michael@greeff.co.za",
+    "instagram": null,
+    "sourceUrls": [
+      "https://www.greeff.co.za/results/residential/for-sale/cape-town/bantry-bay/house/1213815/"
+    ]
+  }
+]
