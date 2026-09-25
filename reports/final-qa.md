@@ -112,8 +112,9 @@ Also: `.res-body` uses `minmax(0, 1fr)` on narrow screens and particulars values
 
 ## Known limits
 
-- **Composition (recommended next: `/impeccable layout`).** The critique's design-specificity point stands: `/houses/` shows 83 equal cards and house pages use hero-plus-even-grid. The monograph concept in `DESIGN.md` lives in copy and credits more than in page composition. Moving to plate-scale layouts is a layout change, not polish, so it was not slipped into this pass.
-- Rivers Edge's story joins the Instagram caption and the YouTube description, so it opens three times in slightly different words. Trimming it is an editorial call for the client.
+- **Composition: done (layout pass, 2026-09-25).** `/houses/` is now a deterministic plate composition (7/5, 4/4/4, 5/7, 4/4/4, 9-column plate), which falls back to a plain grid when filtered. House pages open by lead orientation (landscape, portrait, film, rich). Rechecked: build and validation pass, 0 broken internal refs over 227 pages, 0 axe violations on 11 pages at 1440 and 390px, no horizontal overflow.
+- Repeated openings (Rivers Edge and others) are now removed at build by a conservative dedupe in `scripts/build-data.mjs`: a paragraph is dropped when under 45% of its words are new, and nothing is rewritten. The client should still review the remaining story text.
+- The visual identity moved during the layout pass (warm paper, brass, Libre Caslon Display). `DESIGN.md` records the shipped tokens. Its "fourth identity" comparison predates the move and needs a decision (see that section).
 - Tested in Chromium only (headless, reduced motion). Safari/iOS and Firefox are not covered in this environment.
 - LCP figures come from a local server and are useful only for comparison; measure on the deployed host.
 - Client items still open are listed in `PROJECT_CONTEXT.md` (logo, founder permission, photography rights, archive status, domain).

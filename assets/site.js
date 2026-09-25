@@ -225,6 +225,7 @@
   if (hform) {
     const cards = $$('[data-house]');
     const countEl = $('[data-count]', hform), empty = $('[data-empty]');
+    const grid = $('[data-results]'), refine = $('[data-house-refine]', hform);
     const D = { type: '', province: '', creative: '' };
     const read = () => ({ type: hform.elements.type.value, province: hform.elements.province.value, creative: hform.elements.creative.value });
     const write = st => { $$('input[name="type"]', hform).forEach(r => { r.checked = r.value === st.type; }); hform.elements.province.value = st.province; hform.elements.creative.value = st.creative; };
@@ -236,6 +237,9 @@
         c.hidden = !ok; if (ok) n++;
       });
       countEl.textContent = `${n} house${n === 1 ? '' : 's'}`; empty.hidden = n > 0;
+      // The plate composition is authored for the full set; any filter switches to a plain grid.
+      grid?.classList.toggle('is-filtered', !!(st.type || st.province || st.creative));
+      if (refine && (st.province || st.creative)) refine.open = true;
     };
     const update = () => {
       const st = read(); apply(st);

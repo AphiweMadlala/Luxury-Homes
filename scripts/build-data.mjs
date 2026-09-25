@@ -32,6 +32,21 @@ const story = text => clean(text).split(/\n\s*\n|\n/)
   .filter(s => s.length > 60 && !/^(💰|🛏|🛁|🚗|📏|📐|📍|🇿🇦|For Sale|Asking|Price|Listed|Listing|Agency|Agent|Architect|Designed by|Interior|Developer|Construction|Photographer|📷|📸|🎥|Full)/i.test(s))
   .map(s => unhandle(s.replace(/\s*[🇿🇦🇺🇸🇬🇧].*$/u, '').replace(/\s+/g, ' ')));
 
+// Editorial dedupe: Instagram captions and YouTube descriptions often restate the same
+// opening. A paragraph is dropped when fewer than 45% of its content words are new
+// relative to the lede/summary and the paragraphs kept before it. Nothing is rewritten.
+const STOP = new Set('this that with from their there which have been were into also each every more most very where while will your about these those them they what when such than then only over under just some here home house homes houses'.split(' '));
+const contentWords = s => (String(s).toLowerCase().match(/[a-z'’]{4,}/g) || []).map(w => w.replace(/['’]s$/, '').replace(/s$/, '')).filter(w => w.length > 3 && !STOP.has(w));
+const dedupe = (paras, seed) => {
+  const seen = new Set(contentWords(seed || ''));
+  return paras.filter(p => {
+    const W = [...new Set(contentWords(p))];
+    const novel = W.length ? W.filter(w => !seen.has(w)).length / W.length : 1;
+    W.forEach(w => seen.add(w));
+    return novel >= 0.45;
+  });
+};
+
 const mediaFor = (shortcodes, { kind }) => {
   const out = [];
   for (const sc of shortcodes) {
@@ -109,7 +124,7 @@ const properties = PROPERTIES.map((c, i) => {
     ratesZAR: o.ratesZAR ?? null,
     leviesZAR: o.leviesZAR ?? null,
     lede: c.lede || null,
-    description: story(caption).concat(ytText ? story(ytText).slice(0, 3) : []).filter((s, k, a) => a.indexOf(s) === k),
+    description: dedupe(story(caption).concat(ytText ? story(ytText).slice(0, 3) : []).filter((s, k, a) => a.indexOf(s) === k), c.lede),
     highlights: [],
     features: c.features || [],
     architect: credit(c.architect),
@@ -153,7 +168,7 @@ const features = FEATURES.map((c, i) => {
     builder: c.credits.builder || [],
     photographer: c.credits.photographer || [],
     summary: c.summary || body[0] || null,
-    story: c.summary ? body : body.slice(1),
+    story: dedupe(c.summary ? body : body.slice(1), c.summary || body[0]),
     images: mediaFor(c.posts, { kind: 'feature' }),
     video: videoFor(c.youtube, c.posts),
     instagramPosts: c.posts,
