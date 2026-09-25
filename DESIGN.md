@@ -26,17 +26,19 @@ The result is **A + C**: houses are presented as plates in a monograph with cred
 and the Residences section is a precise register whose first question is always
 "is this available?".
 
-### Why this is a fourth identity
+### How it differs from the sibling projects
 
-> **Needs review (2026-09-25):** the shipped system now uses brass, warm paper and a
-> display serif, which this table and the old "Banned here" list ruled out. Confirm
-> it still reads as distinct from Durban Luxe (white/ink/bronze + display serif).
+The sites share a serif/sans pairing and a warm accent, so the distinction rests on
+purpose, ground, voice and structure, not on the absence of a serif or a metal.
 
-| Previous project | Their system | This site |
-|---|---|---|
-| Exclusive Cape Town | dark navy, gold, Fraunces/Jost, villa rentals | cool mineral ground, pool-water teal, grotesk-led; no rentals |
-| Durban Luxe | white/ink/bronze, Cormorant Garamond, diamond motif, concierge softness | no metallic accent, no display serif, no ornament; credits-first tone |
-| Luxury Homes of SA | plaster/charcoal/face-brick, Archivo + IBM Plex Mono, "Particulars" | cool (not warm) neutrals, no mono face, particulars shown as a register table titled by status, not a "Particulars" system |
+| | Exclusive Cape Town | Durban Luxe | Luxury Homes South Africa |
+|---|---|---|---|
+| Purpose | Villa rentals: a stay | Coastal stays with concierge service | A publication of houses, plus a small register of homes for sale |
+| Ground | Dark navy throughout | Warm white hospitality | Warm paper by default; Night only for film and the footer |
+| Accent | Gold used as atmosphere | Bronze, diamond motif | Brass as notation only: rules, markers, the active tab, chapter numbers |
+| Type | Fraunces / Jost | Cormorant-led, soft | Libre Caslon Display for names and headings; Schibsted Grotesk for every word of UI; Newsreader for prose |
+| Structure | Manifesto and destination mood | Concierge flow | Architectural monograph: plates with credits, then a residence register |
+| Voice | Escape | Service | Credits-first: every house names the practice behind it |
 
 ## Colors
 
@@ -85,6 +87,9 @@ One appearance, light only: paper sections with deliberate **night** sections
 | Chapter number | Schibsted, caps, 0.14em tracking | 0.75rem | 600 | — |
 
 ### Principles
+- Heading rank follows the document outline; appearance comes from classes. The
+  homepage film section is labelled by its chapter heading (h2), and the featured
+  residence inside it is an h3 set at display size.
 - No eyebrows or kickers above headings. Section titles carry the meaning.
 - No em or en dashes in visible text (the renderer converts caption dashes).
 - Prices always as `R 31 000 000`: thin-space grouping; the build wraps each group space in a `.gs` span with a 0.14em gap because Schibsted's space glyphs are too narrow at tabular widths. Amounts never wrap. Form inputs use plain spaces.
@@ -97,8 +102,14 @@ One appearance, light only: paper sections with deliberate **night** sections
 ### Grid & Container
 12-column grid, max width 1480px. Editorial compositions use asymmetric spans
 (7/5, 8/4, 5/7). Home sections open with a `chapter` head: number and word
-(brass ink), title, and an optional link, over a strong rule. Mobile collapses
+(brass ink), title, and an optional link, over a strong rule. Chapter numbers are
+used on the homepage only; other pages open with a plain page head. Mobile collapses
 compositions to one column, except the house index (see `house-plates`).
+
+Supporting pages open with a plate, not a form or a text column: Feature a home (a
+7-column architecture plate beside the proposition, the email composer below it),
+About (the publication's masthead: name, proposition, a 21:9 plate, then "What it
+covers" in four ruled columns), Contact (heading beside a 3:2 plate).
 
 ### Whitespace Philosophy
 Photography gets the space. Text blocks cap at 62ch. Nothing is centred except the
@@ -126,8 +137,18 @@ the range-slider thumb (circular), which is a control affordance.
 ### `site-header`
 Interim rendering of the brand's two-slab mark (Graphite and grey slabs, Champagne
 serif L and H) + a two-line wordmark ("Luxury Homes" in Caslon, "SOUTH AFRICA" in
-tracked caps). Single-line nav at ≥1080px; full-screen menu dialog below. Solid
-Paper, 72px, hairline bottom rule.
+tracked caps). Solid Paper, 72px, hairline bottom rule. Navigation has two groups:
+the sections (Residences, Houses, Films, People, Places), then after a fine vertical
+rule the utility links (Feature a home, Contact) in smaller, quieter type. No filled
+button. Desktop nav from 1080px, where the measured gap between wordmark and nav is
+273px; a full-screen menu dialog below that, with the utility links as a second row.
+"People" is the label for `/architects/` (the URL stays): the directory lists
+designers, developers, builders, photographers and the film studio as well.
+
+### `masthead-index`
+The line under the homepage cover is a table of contents, not a statistic: section
+names in Caslon, a quiet count under each ("3 available, 63 presented", "83
+featured"). Five columns; on mobile the first spans both columns and the rest run 2×2.
 
 ### `site-footer`
 A Night section: oversized Caslon wordmark, then statement, nav and contact in
@@ -144,6 +165,15 @@ Image (3:2), then location line (meta), title (H3), status, price, and one spec 
 (beds / baths / floor). Available cards carry the `avail` marker: a short Brass rule
 plus the word "Available". No borders, no shadows.
 
+### `residence-register`
+While a status has few homes (at most 5 available), `/residences/` shows them as a
+composed register instead of a filtered list: the home with the widest cover
+photograph leads (8 columns, text beside it), the other landscapes follow at 7
+columns, a portrait closes at 4 columns, dropped. Each item shows location, title,
+"Available" with the asking price, specs, and "Marketed by" the agency. Cover
+photographs are used as published; the widest-image heuristic is not, because it
+can surface an interior.
+
 ### `status-line`
 Words first: "Available" (Brass rule, uppercase), "Sold", "Not confirmed, presented 2022"
 on cards and "Availability not confirmed" on detail pages.
@@ -158,9 +188,16 @@ The `/houses/` index is a deterministic plate composition set at build time
 then a single 9-column plate with its caption beside it. Each slot takes the first
 house within an 8-record look-ahead whose lead image suits it: 7-column slots need a
 landscape of at least 800px, the 9-column slot one of at least 1300px, 5-column slots
-a portrait. Any active filter switches the index to a plain 4-column grid
-(`.is-filtered`). Mobile runs full, half, half, and never ends on a single half.
-Caption: Brass `rule-mark`, place, then "Architecture by **Practice**". The middle
+a portrait. A lone record at the end takes a slot that can hold the row (9, 7 or 5
+columns), which also composes practice pages with one, two or three houses.
+Filtered results (`.is-filtered`) stay in pairs: JS assigns 7/5, then 5/7, from the
+visible index; a pair whose first plate is portrait turns so the portrait sits in the
+narrow slot; one result is a solo 9/3 plate. Nothing is reordered or measured at
+runtime. Mobile runs full, then a half pair only when both captions are short
+(title ≤ 24 characters, practice ≤ 26, place ≤ 24); otherwise the next plate is full.
+Caption: Brass `rule-mark`, place (the source location, such as "Fresnaye, Cape
+Town", or its first part when longer than 30 characters), then "Architecture by
+**Practice**". The middle
 dot hangs outside the credit and is clipped when the credit wraps.
 
 ### `house-open`
@@ -185,14 +222,20 @@ swipe, focus restoration, scroll lock).
 
 ### `film-facade`
 Still image + play button; loads a youtube-nocookie iframe only on click. No autoplay.
-Portrait posters use a 4:5 variant. The Films page is a grid of 4:5 film cards.
+Portrait posters use a 4:5 variant. The Films page leads with the newest film at 8
+columns on Night, then 4:5 film cards in three staggered columns.
 
 ### `filter-bar`
-Status tabs (Available / Sold / Archive; active tab underlined in Brass), then a "Refine" panel:
-search, province, bedrooms, bathrooms, sort, price min/max inputs + two-handle
-range on a log scale (R6m to R220m, snapped to R500 000). URL-synchronised with
-Back/Forward. The Refine panel starts collapsed below 768px so results stay in the
-first screen.
+Status tabs (Available / Sold / Archive; active tab underlined in Brass), then a
+"Refine" panel that appears only for a status with 6 or more homes, or when a
+refinement is already active (`REFINE_AT` in `templates/pages.mjs`). Refine offers:
+Location (province, then city, built from the homes in the selected status, with
+counts; nothing that would return zero), Search (property, agent, reference or
+architect), bedrooms, bathrooms, sort, and price min/max with a two-handle range on a
+log scale (R6m to R220m, snapped to R500 000). URL-synchronised with Back/Forward
+(`?status=`, `?loc=p:Province` or `c:Province|City`; older `?province=` links still
+work). Clear filters shows only when something is set. Refine starts collapsed below
+768px.
 
 ### `highlights`
 Published features as a quiet two-column list under a hairline, not chips.
@@ -212,7 +255,10 @@ Published features as a quiet two-column list under a hairline, not chips.
 ## Responsive Behavior
 
 ### Breakpoints
-480 · 768 · 1080 · 1440. Tested at 375, 390, 430, 768, 1024, 1440, 1920.
+480 · 768 · 900 · 1080 · 1200. Tested at 375, 390, 430, 768, 820, 900, 1024, 1080,
+1180, 1280, 1440 and 1920 in Chromium; 390, 1024 and 1440 in Firefox and WebKit.
+Between 900 and 1199px the cover title takes 10 columns so the headline sets in three
+lines, and its caption moves to a row of its own.
 
 ### Touch Targets
 Minimum 44×44px for every interactive element; filter controls 48px tall.

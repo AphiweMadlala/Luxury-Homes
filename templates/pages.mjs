@@ -16,8 +16,6 @@ const pad2 = n => String(n).padStart(2, '0');
 const chapter = (no, word, title, id, link) => `<div class="chapter"><p class="chapter__no" aria-hidden="true">${no}<span>${word}</span></p><h2 id="${id}">${t(title)}</h2>${link || ''}</div>`;
 const arrowLink = (href, label, cls = 'link-ed') => `<a class="${cls}" href="${u(href)}">${label} ${icon('arrow-right')}</a>`;
 
-// The widest landscape among a record's first photographs: the plate that can carry a large slot.
-const bestLandscape = (imgs, n = 4) => imgs.slice(0, n).filter(i => i.orientation === 'landscape').sort((a, b) => b.width - a.width)[0] || imgs[0];
 
 function spreadItem(p, img, sizes) {
   return `<a class="spread__item" href="${u(`/residences/${p.slug}/`)}">
@@ -39,6 +37,7 @@ export function home(S) {
     .map(s => S.featureBySlug[s]).filter(Boolean);
   const provinces = S.places.slice(0, 3);
   const architectCount = S.creatives.filter(c => c.role === 'architect' && S.creativeUse[c.id]).length;
+  const peopleCount = S.creatives.filter(c => S.creativeUse[c.id]).length;
   const v = S.videos.find(x => x.id === sig.video?.id);
   const mins = filmMinutes(sig.video?.duration);
 
@@ -53,18 +52,19 @@ export function home(S) {
     </div>
     <p class="cover__cap"><span class="rule-mark" aria-hidden="true"></span><a href="${u(`/residences/${lead.slug}/`)}">${t(lead.title)}</a><span>${esc(placeLine(lead))}</span><span>Available, <span class="price">${priceLine(lead)}</span></span></p>
   </div>
-  <ul class="masthead" aria-label="The collection">
-    <li><a href="${u('/residences/')}"><b>${pad2(avail.length)}</b> Residences available</a></li>
-    <li><a href="${u('/architects/')}"><b>${pad2(architectCount)}</b> Architects credited</a></li>
-    <li><a href="${u('/houses/')}"><b>${pad2(S.features.length)}</b> Houses</a></li>
-    <li><a href="${u('/films/')}"><b>${pad2(S.videos.length)}</b> Films</a></li>
-  </ul>
+  <nav class="masthead" aria-label="In this publication"><ul>
+    <li><a href="${u('/residences/')}"><b>Residences</b><span>${avail.length} available, ${S.properties.length} presented</span></a></li>
+    <li><a href="${u('/houses/')}"><b>Houses</b><span>${S.features.length} featured</span></a></li>
+    <li><a href="${u('/films/')}"><b>Films</b><span>${S.videos.length} house tours</span></a></li>
+    <li><a href="${u('/architects/')}"><b>People</b><span>${architectCount} architects and ${peopleCount - architectCount} more</span></a></li>
+    <li><a href="${u('/places/')}"><b>Places</b><span>${S.places.length} provinces</span></a></li>
+  </ul></nav>
 </section>
 
 <section class="section wrap" aria-labelledby="avail-h">
   ${chapter('01', 'Residences', 'Available now', 'avail-h', arrowLink('/residences/', 'All residences'))}
   <div class="spread">
-    ${spreadItem(beach, bestLandscape(beach.images), '(min-width: 900px) 56vw, 100vw')}
+    ${spreadItem(beach, beach.images[0], '(min-width: 900px) 56vw, 100vw')}
     ${spreadItem(hills, hills.images[0], '(min-width: 900px) 32vw, 100vw')}
     ${spreadItem(lead, lead.images[1] || lead.images[0], '(min-width: 900px) 58vw, 100vw')}
   </div>
@@ -75,14 +75,14 @@ export function home(S) {
   <div class="plates-index">${platesIndex(S, houses)}</div>
 </section>
 
-<section class="interlude night" aria-labelledby="sig-h">
+<section class="interlude night" aria-labelledby="films-h">
   <div class="wrap">
     ${chapter('03', 'Films', 'The film', 'films-h', arrowLink('/films/', 'All films'))}
     <div class="interlude__grid">
       <div class="interlude__film">${film(sig.video, sig.images[0], sig.title)}</div>
       <div class="interlude__text">
         <p class="credit-line">${t(`A film by Boitumelo Mokonyane Studio${mins ? `, ${mins} min` : ''}${v?.publishedAt ? `, ${monthYear(v.publishedAt)}` : ''}`)}</p>
-        <h2 id="sig-h">${t(sig.title)}</h2>
+        <h3 class="interlude__title">${t(sig.title)}</h3>
         <p class="meta">${esc(placeLine(sig))}</p>
         <p class="lede">${t(sig.lede)}</p>
         <p class="actions">${arrowLink(`/residences/${sig.slug}/`, 'View the residence')}</p>
@@ -122,22 +122,53 @@ export function home(S) {
 }
 
 // ============================================================ RESIDENCES INDEX
+// Refine appears only for a status with enough homes to need it (data-driven, per status).
+const REFINE_AT = 6;
+// Available homes, while few, are composed as a register rather than filtered as a list.
+const SPREAD_MAX = 5;
+
+function registerItem(S, p, img, k, sizes) {
+  const agency = p.agency ? `<p class="reg__by">Marketed by ${t(p.agency)}</p>` : '';
+  return `<article class="reg__item reg__item--${k === 0 ? 'lead' : img.orientation === 'landscape' ? 'wide' : 'tall'}">
+    <a href="${u(`/residences/${p.slug}/`)}">
+      <div class="reg__media">${picture(img, { sizes, alt: `${p.title}, ${placeLine(p)}`, eager: k === 0 })}</div>
+      <div class="reg__text">
+        <p class="meta">${esc(placeLine(p))}</p>
+        <h3>${t(p.title)}</h3>
+        <p class="reg__status"><span class="avail">Available</span><span class="price">${priceLine(p)}</span></p>
+        <p class="specs">${specLine(p)}</p>
+        ${agency}
+      </div>
+    </a>
+  </article>`;
+}
+
 export function residencesIndex(S) {
   const ps = S.properties;
   const prices = ps.map(p => p.priceZAR).filter(Boolean);
   const pmin = Math.floor(Math.min(...prices) / 1e6) * 1e6, pmax = Math.ceil(Math.max(...prices) / 1e6) * 1e6;
-  const provinces = [...new Set(ps.map(p => p.province).filter(Boolean))].sort();
   const counts = { 'for-sale': 0, sold: 0, unknown: 0 };
   ps.forEach(p => counts[p.status]++);
   const order = ['for-sale', 'sold', 'unknown'];
   const sorted = [...ps].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || (b.firstPresentedAt > a.firstPresentedAt ? 1 : -1));
+  // The register leads with the strongest wide photograph; landscapes follow, portraits close.
+  const avail = ps.filter(p => p.status === 'for-sale');
+  const spread = avail.length && avail.length <= SPREAD_MAX ? (() => {
+    // Each home's own cover photograph; the widest-image heuristic can surface an interior.
+    const pick = p => p.images[0];
+    const ranked = [...avail].sort((a, b) => (pick(b).orientation === 'landscape') - (pick(a).orientation === 'landscape') || pick(b).width - pick(a).width);
+    const [lead, ...rest] = ranked;
+    rest.sort((a, b) => (pick(b).orientation === 'landscape') - (pick(a).orientation === 'landscape'));
+    const sizes = (k, img) => k === 0 ? '(min-width: 900px) 64vw, 100vw' : img.orientation === 'landscape' ? '(min-width: 900px) 52vw, 100vw' : '(min-width: 900px) 34vw, 100vw';
+    return [lead, ...rest].map((p, k) => { const img = k === 0 || pick(p).orientation === 'landscape' ? pick(p) : p.images[0]; return registerItem(S, p, img, k, sizes(k, img)); }).join('');
+  })() : '';
   const body = `
 <section class="page-head wrap">
   <h1>Residences</h1>
   <p class="lede">${t('Homes presented for sale on Luxury Homes South Africa. Available residences have been checked against the listing agency; sold and archive homes are kept for reference.')}</p>
 </section>
 <section class="wrap" aria-label="Residences">
-  <form class="filters" data-filters role="search" aria-label="Filter residences" data-pmin="${pmin}" data-pmax="${pmax}">
+  <form class="filters" data-filters role="search" aria-label="Filter residences" data-pmin="${pmin}" data-pmax="${pmax}" data-refine-at="${REFINE_AT}">
     <div class="tabs" role="radiogroup" aria-label="Availability">
       ${[['for-sale', 'Available'], ['sold', 'Sold'], ['unknown', 'Archive']].map(([v, l], i) => `<label class="tab"><input type="radio" name="status" value="${v}"${i === 0 ? ' checked' : ''}><span>${l} <span class="count">${counts[v]}</span></span></label>`).join('')}
     </div>
@@ -145,8 +176,8 @@ export function residencesIndex(S) {
     <details class="refine" open data-refine>
     <summary>Refine</summary>
     <div class="filters__grid">
-      <div class="field field--search"><label for="f-q">Search</label><input id="f-q" name="q" type="search" placeholder="Suburb, estate, agent or architect" autocomplete="off"></div>
-      <div class="field"><label for="f-prov">Province</label><select id="f-prov" name="province"><option value="">All provinces</option>${provinces.map(p => `<option>${esc(p)}</option>`).join('')}</select></div>
+      <div class="field"><label for="f-loc">Location</label><select id="f-loc" name="loc" data-loc><option value="">All locations</option></select></div>
+      <div class="field field--search"><label for="f-q">Search</label><input id="f-q" name="q" type="search" placeholder="Property, agent, reference or architect" autocomplete="off"></div>
       <div class="field"><label for="f-beds">Bedrooms</label><select id="f-beds" name="beds"><option value="">Any</option>${[3, 4, 5, 6].map(n => `<option value="${n}">${n}+</option>`).join('')}</select></div>
       <div class="field"><label for="f-baths">Bathrooms</label><select id="f-baths" name="baths"><option value="">Any</option>${[3, 4, 5, 6].map(n => `<option value="${n}">${n}+</option>`).join('')}</select></div>
       <div class="field"><label for="f-sort">Sort</label><select id="f-sort" name="sort"><option value="recent">Most recent</option><option value="price-desc">Price, high to low</option><option value="price-asc">Price, low to high</option></select></div>
@@ -154,8 +185,8 @@ export function residencesIndex(S) {
     <fieldset class="price-filter">
       <legend>Price</legend>
       <div class="price__inputs">
-        <div class="field"><label for="f-min">Minimum</label><input id="f-min" name="min" inputmode="numeric" placeholder="${rand(pmin).replace(/\u2009/g, ' ')}" autocomplete="off"></div>
-        <div class="field"><label for="f-max">Maximum</label><input id="f-max" name="max" inputmode="numeric" placeholder="${rand(pmax).replace(/\u2009/g, ' ')}" autocomplete="off"></div>
+        <div class="field"><label for="f-min">Minimum</label><input id="f-min" name="min" inputmode="numeric" placeholder="${rand(pmin).replace(/ /g, ' ')}" autocomplete="off"></div>
+        <div class="field"><label for="f-max">Maximum</label><input id="f-max" name="max" inputmode="numeric" placeholder="${rand(pmax).replace(/ /g, ' ')}" autocomplete="off"></div>
       </div>
       <div class="range" data-range>
         <input type="range" min="0" max="100" step="1" value="0" aria-label="Minimum price" data-range-min>
@@ -167,7 +198,8 @@ export function residencesIndex(S) {
     <div class="filters__foot"><p class="result-count" aria-live="polite" data-count></p><button type="reset" class="btn btn--text" data-reset>Clear filters</button></div>
   </form>
   <h2 class="visually-hidden">Results</h2>
-  <div class="rgrid" data-results>
+  ${spread ? `<div class="reg" data-spread>${spread}</div>` : ''}
+  <div class="rgrid" data-results${spread ? ' hidden' : ''}>
     ${sorted.map(p => residenceCard(S, p)).join('')}
   </div>
   <div class="empty" data-empty hidden>
@@ -243,9 +275,11 @@ export function residence(S, p) {
       ? `<p class="status-lg">Sold</p><p class="muted">${t(`Presented on Luxury Homes South Africa in ${monthYear(p.firstPresentedAt)}${p.priceZAR ? ` at ${rand(p.priceZAR)}` : ''}. This home is no longer on the market.`)}</p>`
       : `<p class="status-lg">Availability not confirmed</p><p class="muted">${t(`Presented on Luxury Homes South Africa in ${monthYear(p.firstPresentedAt)}${p.priceZAR ? ` at ${rand(p.priceZAR)}` : ''}. We could not confirm a current listing, so this home is shown for reference only.`)}</p>`;
 
+  // Buyer enquiries go to the mandate holder: viewing first, then the agent's own phone and email.
+  const first = primaryAgent?.name.split(' ')[0];
   const actions = avail
-    ? `<p class="actions">${primaryAgent ? `<a class="btn btn--primary" href="${mailto(primaryAgent.email, `Viewing request: ${infoSubject}`, `Hello ${primaryAgent.name.split(' ')[0]},\n\nI would like to arrange a viewing of ${tidy(title)} (${p.reference}), seen on Luxury Homes South Africa.\n\n`)}">Arrange a viewing</a>` : ''}
-        <a class="link-ed" href="#agent">Contact the agent ${icon('arrow-down')}</a></p>`
+    ? primaryAgent ? `<p class="actions"><a class="btn btn--primary" href="${mailto(primaryAgent.email, `Viewing request: ${infoSubject}`, `Hello ${first},\n\nI would like to arrange a viewing of ${tidy(title)} (${p.reference}), seen on Luxury Homes South Africa.\n\n`)}">Arrange a viewing</a></p>
+        <p class="agent-quick"><a href="${tel(primaryAgent.phone)}">${icon('phone')}Call ${esc(first)}</a><a href="${mailto(primaryAgent.email, infoSubject)}">${icon('envelope-simple')}Email ${esc(first)}</a></p>` : `<p class="actions"><a class="link-ed" href="${esc(p.sourceListingUrl)}" rel="noopener">View the agency listing ${icon('arrow-up-right')}</a></p>`
     : p.status === 'unknown' ? `<p class="actions"><a class="btn btn--secondary" href="${archiveAsk}">Ask about availability</a></p>` : '';
 
   const body = `
@@ -260,7 +294,7 @@ export function residence(S, p) {
       ${statusBlock}
       <p class="specs-lg">${specLine(p)}</p>
       ${actions}
-      ${avail && agents.length ? `<p class="attribution">Listing agent: <b>${t(agents.map(a => a.name).join(' and '))}</b>, ${t(p.agency)}</p>` : ''}
+      ${avail && agents.length ? `<p class="attribution">Marketed by <b>${t(agents.map(a => a.name).join(' and '))}</b>, ${t(p.agency)}</p>` : ''}
     </header>
 
     <div class="res-story">
@@ -510,8 +544,9 @@ export function architectsIndex(S) {
     .map(c => ({ c, f: S.features.filter(f => f.architect.includes(c.id)).sort((a, b) => b.images[0].width - a.images[0].width)[0] })).filter(x => x.f);
   const body = `
 <section class="page-head wrap">
-  <h1>Architects and designers</h1>
-  <p class="lede">${t('Every practice credited on a house or residence in the collection. Credits come from the captions and films in which each home was presented.')}</p>
+  <h1>People</h1>
+  <p class="lede">${t('The architects, interior designers, developers, builders and photographers credited on the houses and residences in the collection. Credits come from the captions and films in which each home was presented.')}</p>
+  <nav class="jump" aria-label="Roles"><ul>${groups.map(([r, cs]) => `<li><a href="#g-${r}">${ROLE_LABEL[r]} <span class="count">${cs.length}</span></a></li>`).join('')}</ul></nav>
 </section>
 <section class="wrap" aria-label="Most represented practices">
   <div class="practice-row">
@@ -526,7 +561,7 @@ export function architectsIndex(S) {
   ${groups.map(([r, cs]) => `<section class="index-group" aria-labelledby="g-${r}"><h2 id="g-${r}">${ROLE_LABEL[r]} <span class="count">${cs.length}</span></h2>
     <ul class="index-list">${cs.map(c => `<li><a href="${u(`/architects/${c.id}/`)}"><span class="index-list__name">${t(c.name)}</span><span class="index-list__n">${plural(S.creativeUse[c.id].total, 'home')}</span></a></li>`).join('')}</ul></section>`).join('')}
 </section>`;
-  return layout(S, { title: 'Architects and designers', path: '/architects/', section: 'architects', body, description: 'South African architects, interior designers and developers credited in the Luxury Homes South Africa collection.' });
+  return layout(S, { title: 'People', path: '/architects/', section: 'architects', body, description: 'South African architects, interior designers, developers, builders and photographers credited in the Luxury Homes South Africa collection.' });
 }
 
 export function architect(S, c) {
@@ -535,13 +570,13 @@ export function architect(S, c) {
   const roleWord = { architect: 'Architecture practice', 'interior-designer': 'Interior design', developer: 'Developer', builder: 'Construction', photographer: 'Photography', 'film-producer': 'Film production' }[c.role];
   const body = `
 <section class="page-head wrap">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="${u('/architects/')}">Architects and designers</a></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="${u('/architects/')}">People</a></nav>
   <h1>${t(c.name)}</h1>
   <p class="meta">${roleWord}, ${plural(fs.length + ps.length, 'home')} in the collection</p>
   <p class="links">${c.instagram ? `<a href="https://www.instagram.com/${esc(c.instagram)}/" rel="noopener">${icon('instagram-logo')}@${esc(c.instagram)}</a>` : ''}${c.website ? `<a href="${esc(c.website)}" rel="noopener">${icon('arrow-up-right')}${esc(c.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''))}</a>` : ''}</p>
 </section>
 <section class="wrap">
-  ${fs.length ? `<h2 class="visually-hidden">Houses</h2>${fs.length >= 4 ? `<div class="plates-index">${platesIndex(S, fs, { eagerFirst: true })}</div>` : `<div class="hgrid">${fs.map((f, i) => houseCard(S, f, { eager: i === 0 })).join('')}</div>`}` : ''}
+  ${fs.length ? `<h2 class="visually-hidden">Houses</h2><div class="plates-index">${platesIndex(S, fs, { eagerFirst: true })}</div>` : ''}
   ${ps.length ? `<h2 class="subhead">Residences</h2><div class="rgrid">${ps.map(p => residenceCard(S, p)).join('')}</div>` : ''}
   ${c.id === 'boitumelo-mokonyane-studio' ? `<p class="lede lede--spaced">${t('Producer of the Luxury Homes South Africa house tour films.')} <a href="${u('/films/')}">See the films</a>.</p>` : ''}
 </section>`;
@@ -564,7 +599,7 @@ export function placesIndex(S) {
     <a class="place__media" href="${u(`/places/${pl.slug}/`)}" tabindex="-1" aria-hidden="true">${picture(pl.image, { sizes: '(min-width: 900px) 58vw, 100vw', alt: '' })}</a>
     <div class="place__text">
       <h2 id="pl-${pl.slug}"><a href="${u(`/places/${pl.slug}/`)}">${esc(pl.name)}</a></h2>
-      <p class="place__counts"><span><b>${pl.houses.length}</b>${pl.houses.length === 1 ? 'House' : 'Houses'}</span><span><b>${pl.residences.length}</b>${pl.residences.length === 1 ? 'Residence' : 'Residences'}</span>${pl.available ? `<span><b>${pl.available}</b>Available</span>` : ''}</p>
+      <p class="place__counts"><span><b>${pl.houses.length}</b>${pl.houses.length === 1 ? 'House' : 'Houses'}</span>${pl.residences.length ? `<span><b>${pl.residences.length}</b>${pl.residences.length === 1 ? 'Residence' : 'Residences'}</span>` : ''}${pl.available ? `<span><b>${pl.available}</b>Available</span>` : ''}</p>
       <ul class="city-list">${pl.cities.map(c => `<li><a href="${u(`/places/${pl.slug}/#${c.slug}`)}">${esc(c.name)} <span class="count">${c.houses.length + c.residences.length}</span></a></li>`).join('')}</ul>
     </div>
   </section>`;
@@ -592,40 +627,54 @@ export function place(S, pl) {
 }
 
 // ============================================================ FEATURE A HOME
+// Wide architecture plates for supporting pages, distinct per page and never the cover house.
+const plateFor = (S, skip = 0) => [...S.features].filter(x => x.slug !== 'kloof-119a' && x.images[0].orientation === 'landscape')
+  .sort((a, b) => b.images[0].width - a.images[0].width || a.slug.localeCompare(b.slug))[skip];
+
 export function featureHome(S) {
   const c = S.business.contact;
-  const f = [...S.features].filter(x => x.slug !== 'kloof-119a' && x.images[0].orientation === 'landscape').sort((a, b) => b.images[0].width - a.images[0].width)[0];
+  const f = plateFor(S, 0);
+  const who = [
+    ['Estate agents', 'Listings for sale, credited to the agent and agency'],
+    ['Architects', 'Completed houses, credited to the practice'],
+    ['Interior designers', 'Interiors, credited to the studio'],
+    ['Developers', 'Projects and estates, including homes still in development'],
+  ];
   const body = `
-<section class="wrap invite">
-  ${f ? `<figure class="invite__media">${picture(f.images[0], { sizes: '(min-width: 900px) 40vw, 100vw', alt: `${f.title}, ${f.location}` })}<figcaption><a href="${u(`/houses/${f.slug}/`)}">${t(f.title)}</a>${creditNames(S, f.architect).length ? `, architecture by ${t(creditNames(S, f.architect).join(' with '))}` : ''}</figcaption></figure>` : ''}
-  <div class="invite__text">
-    <h1>Feature a home</h1>
-    <p class="lede">${t('Luxury Homes South Africa features listings, projects and designs from agents, architects, interior designers and developers across South Africa.')}</p>
+<section class="page-head wrap">
+  <h1>Feature a home</h1>
+  <p class="lede">${t('Luxury Homes South Africa features listings, projects and designs from agents, architects, interior designers and developers across South Africa.')}</p>
+</section>
+<section class="wrap proposition">
+  ${f ? `<figure class="proposition__plate">${picture(f.images[0], { sizes: '(min-width: 900px) 56vw, 100vw', alt: `${f.title}, ${f.location}` })}<figcaption><span class="rule-mark" aria-hidden="true"></span><a href="${u(`/houses/${f.slug}/`)}">${t(f.title)}</a>${creditNames(S, f.architect).length ? `, architecture by ${t(creditNames(S, f.architect).join(' with '))}` : ''}</figcaption></figure>` : ''}
+  <div class="proposition__text">
     <p>${t('Features appear on Instagram, and selected homes are filmed as full-length tours for YouTube. Every feature credits the people behind the home.')}</p>
-
-    <h2>What to send</h2>
-    <ul class="requirements">
+    <h2 id="who-h">Who we feature</h2>
+    <ul class="requirements" aria-labelledby="who-h">${who.map(([k, v]) => `<li><b>${k}</b><span>${t(v)}</span></li>`).join('')}</ul>
+    <h2 id="send-h">What to send</h2>
+    <ul class="requirements" aria-labelledby="send-h">
       <li><b>The home</b><span>The property or project name, and where it is</span></li>
       <li><b>The credits</b><span>Who designed it: architect, interior designer, developer</span></li>
       <li><b>For listings</b><span>The listing agent, agency and asking price, with a link to the listing</span></li>
       <li><b>The imagery</b><span>Photography, and video if you have it, with the photographer’s name</span></li>
     </ul>
-
-    <h2>Get in touch</h2>
-    <p class="actions actions--flush"><a class="btn btn--primary" href="${mailto(c.email, 'Feature request')}">Email ${c.email}</a><a class="link-ed" href="${wa(c.phoneHref, 'Hello Luxury Homes South Africa, I would like to feature a home.')}" rel="noopener">WhatsApp ${c.phone} ${icon('arrow-right')}</a></p>
-
-    <h2 id="compose-h">Or prepare the email here</h2>
-    <form class="compose" data-compose novalidate data-to="${c.email}" aria-labelledby="compose-h">
-      <p class="muted small">This fills in an email in your own mail app. Nothing is sent from this page.</p>
-      <div class="field"><label for="c-role">You are</label><select id="c-role" name="role"><option>An estate agent</option><option>An architect</option><option>An interior designer</option><option>A developer</option><option>A homeowner</option></select></div>
-      <div class="field"><label for="c-name">Property or project</label><input id="c-name" name="property" required autocomplete="off" aria-describedby="c-name-err"><p class="field__error" id="c-name-err" hidden>Add the property or project name.</p></div>
-      <div class="field"><label for="c-loc">Location</label><input id="c-loc" name="location" autocomplete="off"></div>
-      <div class="field"><label for="c-credits">Architect, designer or agent</label><input id="c-credits" name="credits" autocomplete="off"></div>
-      <div class="field"><label for="c-price">Asking price, if for sale</label><input id="c-price" name="price" inputmode="numeric" autocomplete="off"></div>
-      <div class="field"><label for="c-link">Listing or project link</label><input id="c-link" name="link" type="url" placeholder="https://" autocomplete="off"></div>
-      <button class="btn btn--secondary" type="submit">Open in email</button>
-    </form>
   </div>
+</section>
+<section class="wrap send" aria-labelledby="compose-h">
+  <div class="send__intro">
+    <h2 id="compose-h">Prepare an email</h2>
+    <p>${t('Write to us directly, or fill in the details and your mail app opens with the message ready. Nothing is sent from this page.')}</p>
+    <p class="send__direct"><a href="${mailto(c.email, 'Feature request')}">${c.email}</a><a href="${wa(c.phoneHref, 'Hello Luxury Homes South Africa, I would like to feature a home.')}" rel="noopener">WhatsApp ${c.phone}</a></p>
+  </div>
+  <form class="compose" data-compose novalidate data-to="${c.email}" aria-labelledby="compose-h">
+    <div class="field"><label for="c-role">You are</label><select id="c-role" name="role"><option>An estate agent</option><option>An architect</option><option>An interior designer</option><option>A developer</option><option>A homeowner</option></select></div>
+    <div class="field"><label for="c-name">Property or project</label><input id="c-name" name="property" required autocomplete="off" aria-describedby="c-name-err"><p class="field__error" id="c-name-err" hidden>Add the property or project name.</p></div>
+    <div class="field"><label for="c-loc">Location</label><input id="c-loc" name="location" autocomplete="off"></div>
+    <div class="field"><label for="c-credits">Architect, designer or agent</label><input id="c-credits" name="credits" autocomplete="off"></div>
+    <div class="field"><label for="c-price">Asking price, if for sale</label><input id="c-price" name="price" inputmode="numeric" autocomplete="off"></div>
+    <div class="field"><label for="c-link">Listing or project link</label><input id="c-link" name="link" type="url" placeholder="https://" autocomplete="off"></div>
+    <button class="btn btn--primary" type="submit">Open in email</button>
+  </form>
 </section>`;
   return layout(S, { title: 'Feature a home', path: '/feature-a-home/', section: 'feature', body, description: 'How agents, architects, designers and developers can feature a home with Luxury Homes South Africa.' });
 }
@@ -634,36 +683,48 @@ export function featureHome(S) {
 export function about(S) {
   const b = S.business;
   const img = S.featureBySlug['kloof-119a']?.images[0];
+  const practices = S.creatives.filter(c => c.role === 'architect' && S.creativeUse[c.id]).length;
+  const avail = S.properties.filter(p => p.status === 'for-sale').length;
+  const covers = [
+    ['Instagram', `${Math.floor(b.instagram.followers / 1000)} 000 followers`, 'Where the collection began, and where new features appear.', b.instagram.url],
+    ['Film', `${S.videos.length} house tours`, `Full-length tours on YouTube since ${new Date(b.youtube.joined).getFullYear()}, produced by Boitumelo Mokonyane Studio.`, '/films/'],
+    ['Architecture', `${S.features.length} houses`, `Houses and interiors credited to ${practices} architecture practices and their collaborators.`, '/houses/'],
+    ['Real estate', `${avail} available`, `Homes for sale, each marketed by the agency named on the listing. ${S.properties.length} have been presented in all.`, '/residences/'],
+  ];
   const body = `
 <section class="page-head wrap">
-  <h1>About</h1>
+  <h1>Luxury Homes South Africa</h1>
+  <p class="lede">${t('Luxury Homes South Africa presents the country’s most exquisite homes, and credits the agents, architects and designers behind them.')}</p>
 </section>
-<section class="wrap about">
-  <div class="about__text">
-    <p class="lede">${t('Luxury Homes South Africa presents the country’s most exquisite homes, and credits the agents, architects and designers behind them.')}</p>
-    <div class="prose">
-      <p>${t(`It began on Instagram, where the collection has grown to more than ${Math.floor(b.instagram.followers / 1000)} 000 followers, and continues on YouTube, where full-length house tours have been published since ${new Date(b.youtube.joined).getFullYear()}.`)}</p>
-      <p>${t('The collection covers homes on the market, recently completed houses, interiors and projects still in development, from the Atlantic Seaboard and the Winelands to Sandton, Pretoria and the KwaZulu-Natal north coast.')}</p>
-      <p>${t('Luxury Homes South Africa is not an estate agency. Homes that are for sale are marketed by the agencies named on each listing, and enquiries about them go to those agents.')}</p>
-    </div>
-    <dl class="credits credits--about">
-      <div><dt>Founder</dt><dd><a href="https://www.instagram.com/mbuyelo_rathidili/" rel="noopener">Mbuyelo Rathidili</a></dd></div>
-      <div><dt>Films produced by</dt><dd><a href="${u('/architects/boitumelo-mokonyane-studio/')}">Boitumelo Mokonyane Studio</a></dd></div>
-    </dl>
-    <p class="actions"><a class="link-ed" href="${b.instagram.url}" rel="noopener">Instagram ${icon('arrow-up-right')}</a><a class="link-ed" href="${b.youtube.url}" rel="noopener">YouTube ${icon('arrow-up-right')}</a></p>
+${img ? `<figure class="wrap about__plate">${picture(img, { sizes: '(min-width: 1480px) 1400px, 100vw', alt: 'Kloof 119A, Cape Town, by SAOTA' })}<figcaption><span class="rule-mark" aria-hidden="true"></span><a href="${u('/houses/kloof-119a/')}">Kloof 119A</a>, SAOTA with ARRCC and OKHA</figcaption></figure>` : ''}
+<section class="wrap about-covers" aria-labelledby="covers-h">
+  <h2 id="covers-h">What it covers</h2>
+  <ul>${covers.map(([k, n, text, href]) => `<li><a href="${href.startsWith('http') ? href : u(href)}"${href.startsWith('http') ? ' rel="noopener"' : ''}><b>${k}</b><span class="about-covers__n">${t(n)}</span></a><p>${t(text)}</p></li>`).join('')}</ul>
+</section>
+<section class="wrap about-model" aria-labelledby="model-h">
+  <h2 id="model-h">Not an estate agency</h2>
+  <div class="prose">
+    <p>${t('Luxury Homes South Africa is not an estate agency. Homes that are for sale are marketed by the agencies named on each listing, and enquiries about them go to those agents.')}</p>
+    <p>${t('The collection covers homes on the market, recently completed houses, interiors and projects still in development, from the Atlantic Seaboard and the Winelands to Sandton, Pretoria and the KwaZulu-Natal north coast.')}</p>
   </div>
-  ${img ? `<figure class="about__media">${picture(img, { sizes: '(min-width: 1080px) 45vw, 100vw', alt: 'Kloof 119A, Cape Town, by SAOTA' })}<figcaption><a href="${u('/houses/kloof-119a/')}">Kloof 119A</a>, SAOTA with ARRCC and OKHA</figcaption></figure>` : ''}
+  <dl class="credits credits--about">
+    <div><dt>Founder</dt><dd><a href="https://www.instagram.com/mbuyelo_rathidili/" rel="noopener">Mbuyelo Rathidili</a></dd></div>
+    <div><dt>Films produced by</dt><dd><a href="${u('/architects/boitumelo-mokonyane-studio/')}">Boitumelo Mokonyane Studio</a></dd></div>
+  </dl>
 </section>`;
-  return layout(S, { title: 'About', path: '/about/', section: '', body, description: 'About Luxury Homes South Africa.' });
+  return layout(S, { title: 'About', path: '/about/', section: 'about', body, image: img, description: 'About Luxury Homes South Africa.' });
 }
 
 // ============================================================ CONTACT
 export function contact(S) {
   const c = S.business.contact;
   const avail = S.properties.filter(p => p.status === 'for-sale');
+  const f = plateFor(S, 1);
   const body = `
-<section class="page-head wrap">
-  <h1>Contact</h1>
+<section class="wrap contact-open">
+  <div class="contact-open__title"><h1>Contact</h1>
+    <p class="lede">${t('Buyers speak to the listing agent. Everything else comes to us.')}</p></div>
+  ${f ? `<figure class="contact-open__plate">${picture(f.images[0], { eager: true, sizes: '(min-width: 900px) 56vw, 100vw', alt: `${f.title}, ${f.location}` })}<figcaption><span class="rule-mark" aria-hidden="true"></span><a href="${u(`/houses/${f.slug}/`)}">${t(f.title)}</a>, ${t(f.location)}</figcaption></figure>` : ''}
 </section>
 <section class="wrap contact-grid">
   <section aria-labelledby="ct-buy"><h2 id="ct-buy">Buying a residence</h2>
@@ -671,15 +732,16 @@ export function contact(S) {
     <ul class="agent-index">${avail.map(p => `<li><a href="${u(`/residences/${p.slug}/`)}">${t(p.title)}</a><span class="muted">${p.agentIds.map(id => S.agentById[id].name).join(', ')}, ${t(p.agency)}</span></li>`).join('')}</ul>
   </section>
   <section aria-labelledby="ct-info"><h2 id="ct-info">Property information</h2>
+    <p>${t('Questions about a home in the collection, including sold and archive homes.')}</p>
     <p><a class="big-link" href="${mailto(c.generalEmail, 'Property information')}">${c.generalEmail}</a></p>
   </section>
   <section aria-labelledby="ct-feat"><h2 id="ct-feat">Features and collaboration</h2>
+    <p>${t('Agents, architects, designers and developers with a home to feature.')}</p>
     <p><a class="big-link" href="${mailto(c.email, 'Feature enquiry')}">${c.email}</a></p>
-    <p><a href="${wa(c.phoneHref)}" rel="noopener">${icon('whatsapp-logo')}WhatsApp ${c.phone}</a><br><a href="${tel(c.phoneHref)}">${icon('phone')}Call ${c.phone}</a></p>
-    <p><a href="${u('/feature-a-home/')}">What to send</a></p>
+    <p class="contact-lines"><a href="${wa(c.phoneHref)}" rel="noopener">${icon('whatsapp-logo')}WhatsApp ${c.phone}</a><a href="${tel(c.phoneHref)}">${icon('phone')}Call ${c.phone}</a><a href="${u('/feature-a-home/')}">What to send</a></p>
   </section>
 </section>`;
-  return layout(S, { title: 'Contact', path: '/contact/', section: 'contact', body, description: 'Contact Luxury Homes South Africa.' });
+  return layout(S, { title: 'Contact', path: '/contact/', section: 'contact', body, image: f?.images[0], preload: f?.images[0], preloadSizes: '(min-width: 900px) 56vw, 100vw', description: 'Contact Luxury Homes South Africa.' });
 }
 
 export function notFound(S) {

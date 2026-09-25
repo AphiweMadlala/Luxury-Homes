@@ -1,13 +1,18 @@
 // Reusable page components.
 import { u, esc, t, tidy, rand, area, num, monthYear, fullDate, icon, picture, plural, PROPOSAL_MODE, SITE_URL, mailto, tel, wa } from './lib.mjs';
 
+// Sections of the publication, then a separate utility group. The People section keeps its
+// original /architects/ URL; the label changed because it lists designers, builders and film too.
 export const NAV = [
   ['residences', 'Residences', '/residences/'],
   ['houses', 'Houses', '/houses/'],
   ['films', 'Films', '/films/'],
-  ['architects', 'Architects', '/architects/'],
+  ['architects', 'People', '/architects/'],
   ['places', 'Places', '/places/'],
+];
+export const UTIL = [
   ['feature', 'Feature a home', '/feature-a-home/'],
+  ['contact', 'Contact', '/contact/'],
 ];
 
 // Interim rendering of the brand's two-slab mark: graphite and grey slabs, champagne serif L and H.
@@ -52,17 +57,19 @@ ${footer(S)}
 }
 
 function header(section) {
-  const links = NAV.map(([k, label, href]) => `<li><a href="${u(href)}"${k === section ? ' aria-current="page"' : ''}>${label}</a></li>`).join('');
+  const li = list => list.map(([k, label, href]) => `<li><a href="${u(href)}"${k === section ? ' aria-current="page"' : ''}>${label}</a></li>`).join('');
+  const links = li(NAV);
   return `<header class="site-header" data-header>
   <div class="site-header__inner">
     <a class="brand" href="${u('/')}" aria-label="Luxury Homes South Africa, home">${wordmark()}</a>
-    <nav class="nav" aria-label="Primary"><ul>${links}<li><a class="nav__contact" href="${u('/contact/')}"${section === 'contact' ? ' aria-current="page"' : ''}>Contact</a></li></ul></nav>
+    <nav class="nav" aria-label="Primary"><ul class="nav__main">${links}</ul><ul class="nav__util">${li(UTIL)}</ul></nav>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" data-menu-open>${icon('list')}<span>Menu</span></button>
   </div>
   <div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Menu" hidden data-menu>
     <div class="menu__top"><a class="brand" href="${u('/')}" aria-label="Luxury Homes South Africa, home">${wordmark()}</a>
       <button class="icon-btn" type="button" data-menu-close aria-label="Close menu">${icon('x')}</button></div>
-    <ul class="menu__list">${links}<li><a href="${u('/contact/')}">Contact</a></li><li><a href="${u('/about/')}">About</a></li></ul>
+    <ul class="menu__list">${links}</ul>
+    <ul class="menu__util">${li([...UTIL, ['about', 'About', '/about/']])}</ul>
   </div>
 </header>`;
 }
@@ -77,7 +84,7 @@ function footer(S) {
         <p>${t('A collection of the most exquisite homes, represented by the who’s who in real estate, architecture and design.')}</p>
       </div>
       <nav class="footer-nav" aria-label="Footer">
-        <ul>${NAV.map(([, l, h]) => `<li><a href="${u(h)}">${l}</a></li>`).join('')}<li><a href="${u('/about/')}">About</a></li><li><a href="${u('/contact/')}">Contact</a></li></ul>
+        <ul>${[...NAV, ['about', 'About', '/about/'], ...UTIL].map(([, l, h]) => `<li><a href="${u(h)}">${l}</a></li>`).join('')}</ul>
       </nav>
       <div class="footer-contact">
         <p><a href="${mailto(c.email, 'Luxury Homes South Africa')}">${c.email}</a></p>
@@ -118,7 +125,7 @@ export function residenceCard(S, p, { sizes = '(min-width: 1080px) 33vw, (min-wi
   const img = p.images[imageIndex] || p.images[0];
   const search = [p.title, p.reference, p.city, p.suburb, p.estate, p.area, p.province, p.agency, p.agentText,
     ...p.agentIds.map(id => S.agentById[id]?.name), S.creativeById[p.architect]?.name, p.architectText].filter(Boolean).join(' ').toLowerCase();
-  return `<article class="rcard${lead ? ' rcard--lead' : ''}" data-residence data-status="${p.status}" data-price="${p.priceZAR ?? ''}" data-beds="${p.bedrooms ?? ''}" data-baths="${p.bathrooms ?? ''}" data-province="${esc(p.province || '')}" data-date="${p.firstPresentedAt}" data-search="${esc(tidy(search))}">
+  return `<article class="rcard${lead ? ' rcard--lead' : ''}" data-residence data-status="${p.status}" data-price="${p.priceZAR ?? ''}" data-beds="${p.bedrooms ?? ''}" data-baths="${p.bathrooms ?? ''}" data-province="${esc(p.province || '')}" data-city="${esc(p.city || '')}" data-date="${p.firstPresentedAt}" data-search="${esc(tidy(search))}">
   <a class="rcard__link" href="${u(`/residences/${p.slug}/`)}">
     <div class="rcard__media">${picture(img, { sizes, alt: `${p.title}, ${placeLine(p)}` })}</div>
     <p class="meta">${esc(placeLine(p))}</p>
@@ -132,17 +139,31 @@ export function residenceCard(S, p, { sizes = '(min-width: 1080px) 33vw, (min-wi
 // ------------------------------------------------------------ houses
 export const creditNames = (S, ids) => ids.map(id => S.creativeById[id]?.name).filter(Boolean);
 
+// The most specific verified place label: the source location (suburb or estate, then city)
+// when it is concise; otherwise its first, most specific part. Nothing is added to the source.
+export const captionPlace = f => {
+  const loc = tidy(f.location || '');
+  if (!loc) return f.city || '';
+  return loc.length <= 30 ? loc : loc.split(',')[0].trim();
+};
+
+// A caption is "long" when it would cramp a two-up mobile plate (about 165px wide at 375).
+export const longCaption = (S, f) => {
+  const who = creditNames(S, f.architect.length ? f.architect : f.designer).join(' with ');
+  return tidy(f.title).length > 24 || who.length > 26 || captionPlace(f).length > 24;
+};
+
 // A house is a plate with a caption: image, name, place, and the practice that made it.
 export function houseCaption(S, f) {
   const who = creditNames(S, f.architect.length ? f.architect : f.designer);
   const role = f.architect.length ? 'Architecture by' : f.designer.length ? 'Interiors by' : '';
-  const place = f.city || f.location;
+  const place = captionPlace(f);
   return `<p class="hplate__cap"><span class="rule-mark" aria-hidden="true"></span><span>${t(place)}</span>${who.length ? `<span class="hplate__credit"><span class="sep" aria-hidden="true">·</span>${role} <b>${t(who.join(' with '))}</b></span>` : ''}</p>`;
 }
 
 export function houseCard(S, f, { sizes = '(min-width: 1080px) 33vw, (min-width: 768px) 50vw, 100vw', eager = false, cls = '', index = false, img } = {}) {
   const lead = img || f.images[0];
-  const attrs = index ? ` data-house data-type="${f.type}" data-province="${esc(f.province || '')}" data-creatives="${[...f.architect, ...f.designer, ...f.developer, ...f.builder, ...f.photographer].join(' ')}"` : '';
+  const attrs = index ? ` data-house data-type="${f.type}" data-province="${esc(f.province || '')}" data-creatives="${[...f.architect, ...f.designer, ...f.developer, ...f.builder, ...f.photographer].join(' ')}" data-orient="${lead.orientation}"${longCaption(S, f) ? ' data-long' : ''}` : '';
   return `<article class="hplate${cls ? ` ${cls}` : ''}"${attrs}>
   <a href="${u(`/houses/${f.slug}/`)}">
     <div class="hplate__media">${picture(lead, { sizes, alt: `${f.title}, ${f.location}`, eager })}</div>
@@ -166,14 +187,15 @@ const SIZES = {
   w7: '(min-width: 900px) 56vw, 100vw', p5: '(min-width: 900px) 40vw, 100vw',
   s4: '(min-width: 900px) 32vw, 50vw', x9: '(min-width: 900px) 72vw, 100vw',
 };
-export function composePlates(list) {
+export function composePlates(list, { isLong = () => false } = {}) {
   const queue = [...list];
   const out = [];
   let r = 0;
   while (queue.length) {
     let row = ROWS[r % ROWS.length]; r++;
     if (row[0] === 'x9' && !queue.slice(0, 8).some(f => fits.x9(f.images[0]))) continue;
-    if (queue.length < row.length) row = queue.length === 1 ? ['s4'] : ['w7', 'p5'].slice(0, queue.length);
+    // A lone record gets a plate that can hold the row by itself, never a stranded third.
+    if (queue.length < row.length) row = queue.length === 1 ? [queue.some(f => fits.x9(f.images[0])) ? 'x9' : queue.some(f => fits.w7(f.images[0])) ? 'w7' : 'p5'] : ['w7', 'p5'];
     row.forEach((slot, k) => {
       if (!queue.length) return;
       let at = queue.slice(0, 8).findIndex(f => fits[slot](f.images[0]));
@@ -182,12 +204,18 @@ export function composePlates(list) {
       out.push({ f, slot, lead: k === 0 });
     });
   }
-  // mobile rhythm: full, half, half; never leave a single half at the end
-  return out.map((x, i) => ({ ...x, half: i % 3 !== 0 && !(i % 3 === 1 && i === out.length - 1) }));
+  // Mobile rhythm: full, then a half pair when both captions stay usable at half width;
+  // otherwise the next record is full too. Order never changes, and no half is left alone.
+  for (let i = 0; i < out.length;) {
+    out[i].half = false;
+    const a = out[i + 1], b = out[i + 2];
+    if (a && b && !isLong(a.f) && !isLong(b.f)) { a.half = b.half = true; i += 3; } else i += 1;
+  }
+  return out;
 }
 
 export function platesIndex(S, list, { index = false, eagerFirst = false } = {}) {
-  return composePlates(list).map(({ f, slot, lead, half }, i) => houseCard(S, f, {
+  return composePlates(list, { isLong: f => longCaption(S, f) }).map(({ f, slot, lead, half }, i) => houseCard(S, f, {
     sizes: SIZES[slot], eager: eagerFirst && i === 0, index,
     cls: [`p-${slot}`, lead && 'p-lead', f.images[0].orientation === 'portrait' && 'p-portrait', half && 'm-half'].filter(Boolean).join(' '),
   })).join('');
@@ -199,7 +227,7 @@ export function credits(S, rows) {
   return `<dl class="credits">${items.map(([label, ids]) => `<div><dt>${label}</dt><dd>${ids.map(id => {
     const c = S.creativeById[id];
     return c ? `<a href="${u(`/architects/${c.id}/`)}">${t(c.name)}</a>` : t(id);
-  }).join('<br>')}</dd></div>`).join('')}</dl>`;
+  }).join('')}</dd></div>`).join('')}</dl>`;
 }
 
 // ------------------------------------------------------------ media
