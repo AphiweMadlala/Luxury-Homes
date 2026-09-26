@@ -56,7 +56,7 @@
       i = (n + items.length) % items.length;
       const it = items[i];
       img.removeAttribute('srcset'); img.src = it.src; img.srcset = it.srcset; img.sizes = '100vw'; img.alt = it.alt;
-      img.width = it.w; img.height = it.h; img.style.maxWidth = `min(100%, ${it.w}px)`; // never beyond the stage, never enlarged
+      img.width = it.w; img.height = it.h; img.style.maxWidth = it.w + 'px';
       count.textContent = `${i + 1} of ${items.length}`;
       [items[i + 1], items[i - 1]].forEach(p => { if (p) { const pre = new Image(); pre.srcset = p.srcset; pre.sizes = '100vw'; } });
     };
@@ -117,10 +117,6 @@
   if (form) {
     const cards = $$('[data-residence]');
     const grid = $('[data-results]');
-    const spread = $('[data-spread]');
-    const refine = $('[data-refine]', form);
-    const locSel = form.elements.loc;
-    const refineAt = Number(form.dataset.refineAt) || 0;
     const empty = $('[data-empty]');
     const countEl = $('[data-count]');
     const note = $('[data-status-note]');
@@ -136,48 +132,16 @@
       sold: 'Homes presented on Luxury Homes South Africa that have since sold.',
       unknown: 'Homes presented for sale between 2021 and 2025. We could not confirm a current listing for these, so they are shown for reference, with the price as presented at the time.',
     };
-    const DEFAULTS = { status: 'for-sale', q: '', loc: '', beds: '', baths: '', sort: 'recent', min: '', max: '' };
-    const REFINEMENTS = ['q', 'loc', 'beds', 'baths', 'min', 'max'];
-    const refined = st => REFINEMENTS.some(k => st[k]);
-
-    // Location options come from the homes in the selected status only: province, then its cities.
-    // Values: "p:Province" or "c:Province|City". Nothing with zero homes is offered.
-    const buildLocations = (status, keep) => {
-      const tree = new Map();
-      cards.filter(c => c.dataset.status === status).forEach(c => {
-        const pv = c.dataset.province, city = c.dataset.city;
-        if (!pv) return;
-        if (!tree.has(pv)) tree.set(pv, { n: 0, cities: new Map() });
-        const node = tree.get(pv); node.n++;
-        if (city) node.cities.set(city, (node.cities.get(city) || 0) + 1);
-      });
-      locSel.replaceChildren(new Option('All locations', ''));
-      [...tree.keys()].sort().forEach(pv => {
-        const node = tree.get(pv), g = document.createElement('optgroup');
-        g.label = pv;
-        g.append(new Option(`All of ${pv} (${node.n})`, `p:${pv}`));
-        [...node.cities.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach(([city, n]) => g.append(new Option(`${city} (${n})`, `c:${pv}|${city}`)));
-        locSel.append(g);
-      });
-      const ok = keep && [...locSel.options].some(o => o.value === keep);
-      locSel.value = ok ? keep : '';
-      return locSel.value;
-    };
-    const locMatch = (d, loc) => {
-      if (!loc) return true;
-      if (loc.startsWith('p:')) return d.province === loc.slice(2);
-      const [pv, city] = loc.slice(2).split('|');
-      return d.province === pv && d.city === city;
-    };
+    const DEFAULTS = { status: 'for-sale', q: '', province: '', beds: '', baths: '', sort: 'recent', min: '', max: '' };
 
     const readForm = () => ({
-      status: form.elements.status.value, q: form.elements.q.value.trim(), loc: locSel.value,
+      status: form.elements.status.value, q: form.elements.q.value.trim(), province: form.elements.province.value,
       beds: form.elements.beds.value, baths: form.elements.baths.value, sort: form.elements.sort.value,
       min: parsePrice(tMin.value) || '', max: parsePrice(tMax.value) || '',
     });
     const writeForm = st => {
       $$('input[name="status"]', form).forEach(r => { r.checked = r.value === st.status; });
-      form.elements.q.value = st.q; st.loc = buildLocations(st.status, st.loc); form.elements.beds.value = st.beds;
+      form.elements.q.value = st.q; form.elements.province.value = st.province; form.elements.beds.value = st.beds;
       form.elements.baths.value = st.baths; form.elements.sort.value = st.sort;
       tMin.value = st.min ? fmt(st.min) : ''; tMax.value = st.max ? fmt(st.max) : '';
       rMin.value = st.min ? toPos(st.min) : 0; rMax.value = st.max ? toPos(st.max) : 100; paintRange();
@@ -186,7 +150,6 @@
       const p = new URLSearchParams(location.search);
       const st = { ...DEFAULTS };
       for (const k of Object.keys(DEFAULTS)) if (p.has(k)) st[k] = p.get(k);
-      if (!st.loc && p.get('province')) st.loc = `p:${p.get('province')}`; // earlier links used ?province=
       if (!['for-sale', 'sold', 'unknown'].includes(st.status)) st.status = 'for-sale';
       st.min = parsePrice(st.min) || ''; st.max = parsePrice(st.max) || '';
       return st;
@@ -210,7 +173,7 @@
       const shown = cards.filter(c => {
         const d = c.dataset, price = Number(d.price) || null;
         const ok = d.status === st.status
-          && locMatch(d, st.loc)
+          && (!st.province || d.province === st.province)
           && (!st.beds || Number(d.beds) >= Number(st.beds))
           && (!st.baths || Number(d.baths) >= Number(st.baths))
           && (!priced || (price != null && price >= lo && price <= hi))
@@ -225,14 +188,6 @@
       countEl.textContent = `${shown.length} ${label}${shown.length === 1 ? '' : 's'}`;
       empty.hidden = shown.length > 0;
       note.textContent = NOTES[st.status];
-      // Few available homes are shown as the composed register; any refinement shows the list.
-      const composed = !!spread && st.status === 'for-sale' && !refined(st);
-      if (spread) spread.hidden = !composed;
-      grid.hidden = composed;
-      // Refine is offered where the status has enough homes to need it, or a refinement is active.
-      const inStatus = cards.filter(c => c.dataset.status === st.status).length;
-      if (refine) refine.hidden = inStatus < refineAt && !refined(st);
-      $$('[data-reset]', form).forEach(b => { b.hidden = st.status === DEFAULTS.status && !refined(st) && st.sort === DEFAULTS.sort; });
       [tMin, tMax].forEach(inp => inp.setAttribute('aria-invalid', Number.isNaN(parsePrice(inp.value)) ? 'true' : 'false'));
     };
     const update = push => { const st = readForm(); apply(st); toURL(st, push); };
@@ -243,7 +198,6 @@
         const v = parsePrice(e.target.value);
         if (v) { e.target.value = fmt(v); (e.target === tMin ? rMin : rMax).value = toPos(v); paintRange(); }
       }
-      if (e.target.name === 'status') buildLocations(e.target.value, locSel.value);
       if (e.target.type !== 'range') update(true);
     });
     let qTimer;
@@ -261,7 +215,9 @@
     addEventListener('popstate', () => { const st = fromURL(); writeForm(st); apply(st); });
     const initial = fromURL(); writeForm(initial); apply(initial);
     // On small screens the refine panel starts closed unless a refinement is active.
-    if (refine && matchMedia('(max-width: 767px)').matches && !refined(initial)) refine.open = false;
+    const refine = $('[data-refine]', form);
+    const active = ['q', 'province', 'beds', 'baths', 'min', 'max'].some(k => initial[k]);
+    if (refine && matchMedia('(max-width: 767px)').matches && !active) refine.open = false;
   }
 
   // ---------------------------------------------------------------- houses filters
@@ -269,39 +225,17 @@
   if (hform) {
     const cards = $$('[data-house]');
     const countEl = $('[data-count]', hform), empty = $('[data-empty]');
-    const grid = $('[data-results]'), refine = $('[data-house-refine]', hform);
     const D = { type: '', province: '', creative: '' };
     const read = () => ({ type: hform.elements.type.value, province: hform.elements.province.value, creative: hform.elements.creative.value });
     const write = st => { $$('input[name="type"]', hform).forEach(r => { r.checked = r.value === st.type; }); hform.elements.province.value = st.province; hform.elements.creative.value = st.creative; };
     const fromURL = () => { const p = new URLSearchParams(location.search); return { type: p.get('type') || '', province: p.get('province') || '', creative: p.get('creative') || '' }; };
     const apply = st => {
-      const shown = [];
+      let n = 0;
       cards.forEach(c => {
         const ok = (!st.type || c.dataset.type === st.type) && (!st.province || c.dataset.province === st.province) && (!st.creative || c.dataset.creatives.split(' ').includes(st.creative));
-        c.hidden = !ok; if (ok) shown.push(c);
+        c.hidden = !ok; if (ok) n++;
       });
-      const n = shown.length;
-      // Filtered results keep the publication's pairs: 7/5, then 5/7, in document order. A pair whose
-      // first plate is portrait turns to put the portrait in the narrow slot. Mobile runs full, then a
-      // half pair when both captions are short. Assigned from the visible index only; never reordered.
-      const filtered = !!(st.type || st.province || st.creative);
-      cards.forEach(c => { delete c.dataset.fslot; delete c.dataset.fhalf; });
-      if (filtered) {
-        for (let i = 0, pair = 0; i < n; i += 2, pair++) {
-          const a = shown[i], b = shown[i + 1];
-          if (!b) { a.dataset.fslot = n === 1 ? 'solo' : 'last'; break; }
-          const flip = pair % 2 === 1;
-          const narrowFirst = a.dataset.orient !== 'landscape' && b.dataset.orient === 'landscape' ? true : a.dataset.orient === 'landscape' && b.dataset.orient !== 'landscape' ? false : flip;
-          a.dataset.fslot = narrowFirst ? 'n' : 'w'; b.dataset.fslot = narrowFirst ? 'w' : 'n';
-        }
-        for (let i = 0; i < n;) {
-          const a = shown[i + 1], b = shown[i + 2];
-          if (a && b && !('long' in a.dataset) && !('long' in b.dataset)) { a.dataset.fhalf = b.dataset.fhalf = ''; i += 3; } else i += 1;
-        }
-      }
       countEl.textContent = `${n} house${n === 1 ? '' : 's'}`; empty.hidden = n > 0;
-      grid?.classList.toggle('is-filtered', filtered);
-      if (refine && (st.province || st.creative)) refine.open = true;
     };
     const update = () => {
       const st = read(); apply(st);
