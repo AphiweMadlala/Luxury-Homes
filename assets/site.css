@@ -504,11 +504,12 @@ details.archive .rgrid { margin-top: 1.5rem; }
 .footer-legal.wrap { max-width: var(--max); }
 
 /* ---------- lightbox */
-.lightbox { position: fixed; inset: 0; z-index: 60; background: var(--scrim); color: #fff; display: grid; grid-template-rows: auto 1fr auto; }
+.lightbox { position: fixed; inset: 0; z-index: 60; background: var(--scrim); color: #fff; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
 .lightbox[hidden] { display: none; }
 .lightbox__bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem var(--gutter); min-height: var(--header); }
 .lightbox__count { font-variant-numeric: tabular-nums; font-size: 0.9375rem; }
-.lightbox__stage { display: grid; place-items: center; min-height: 0; padding: 0 clamp(0.5rem, 5vw, 5rem); }
+/* Definite tracks, so the photograph's max-width and max-height resolve and it always fits the stage. */
+.lightbox__stage { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; min-height: 0; padding: 0 clamp(0.5rem, 5vw, 5rem); }
 .lightbox__stage img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; background: none; }
 .lightbox__nav { display: flex; justify-content: center; gap: 1rem; padding: 1rem; }
 .lightbox .icon-btn { color: #fff; border: 1px solid rgb(255 255 255 / .35); }
