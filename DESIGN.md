@@ -213,12 +213,19 @@ Role label (meta) over name (H3 weight) linking to the architect page. Appears a
 the fold on house pages.
 
 ### `plate-gallery`
-Singles only for landscapes of 1100px or more; other landscapes pair (cropped to 3:2
-so pairs align); portraits run in threes (4:5). A lone final image folds into the
-row before it. Residence leads: 2/3 + stacked side pair for landscapes, a 4:5
-triptych for portrait-only records; the "N photographs" control sits below the
-lead, never on the image. Opens a lightbox dialog (focus trap, Escape, arrow keys,
-swipe, focus restoration, scroll lock).
+House pages only. Singles only for landscapes of 1100px or more; other landscapes pair
+(cropped to 3:2 so pairs align); portraits run in threes (4:5). A lone final image folds
+into the row before it. Opens a lightbox dialog (focus trap, Escape, arrow keys, swipe,
+focus restoration, scroll lock).
+
+### `residence-lead`
+A residence page has one gallery, its lead: 2/3 + stacked side pair for landscapes, a
+4:5 triptych for portrait-only records. The "N photographs" control sits below the lead,
+never on the image, and opens every photograph of the home in the lightbox; no plates
+repeat them further down. With two photographs the second takes both side slots (a 4:5
+pair for portraits); a lone landscape spans the lead, enlarged at most 1.3×; a lone
+portrait stays a 4:5 plate. When the set includes film stills, "Includes stills from the
+Luxury Homes South Africa film." sits beside the control.
 
 ### `film-facade`
 Still image + play button; loads a youtube-nocookie iframe only on click. No autoplay.

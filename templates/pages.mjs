@@ -240,16 +240,28 @@ function filmSection(S, video, poster, title) {
   </section>`;
 }
 
+// Display width of the lead photograph, shared by the opening gallery and its preload hint.
+const leadSizes = p => p.images[0].orientation === 'portrait'
+  ? (p.images.length === 2 ? '50vw' : '(min-width: 768px) 33vw, 100vw')
+  : (p.images.length === 1 ? '(min-width: 1480px) 1400px, 100vw' : '(min-width: 1080px) 62vw, 100vw');
+
+// The opening gallery is the page's only gallery: up to three photographs, and a control that opens
+// the complete set in the lightbox. With fewer than three, the photographs share the lead (no empty slot).
 function resLead(p, title) {
   const n = p.images.length;
-  const btn = (img, i, sizes, cls = '') => `<button type="button" class="${cls}" data-lightbox="${i}" aria-label="Open photograph ${i + 1} of ${n}">${picture(img, { eager: i === 0, sizes, alt: i === 0 ? `${title}, ${placeLine(p)}` : `${title}, photograph ${i + 1}` })}</button>`;
+  const btn = (img, i, sizes, cls = '', style = '') => `<button type="button" class="${cls}"${style} data-lightbox="${i}" aria-label="Open photograph ${i + 1} of ${n}">${picture(img, { eager: i === 0, sizes, alt: i === 0 ? `${title}, ${placeLine(p)}` : `${title}, photograph ${i + 1}` })}</button>`;
   const all = n > 1 ? `<button type="button" class="btn btn--secondary res-lead__all" data-lightbox="0">${icon('arrows-out')}${plural(n, 'photograph')}</button>` : '';
+  const stills = p.images.some(img => img.role !== 'photograph') ? '<span class="res-lead__note">Includes stills from the Luxury Homes South Africa film.</span>' : '';
+  const bar = all || stills ? `<p class="res-lead__bar">${stills}${all}</p>` : '';
+  const few = n < 3 ? ` res-lead--${n}` : '';
   if (p.images[0].orientation === 'portrait') {
-    return `<div class="wrap"><div class="res-lead res-lead--triptych">${p.images.slice(0, 3).map((img, i) => btn(img, i, '(min-width: 768px) 33vw, 100vw')).join('')}</div>${all ? `<p class="res-lead__bar">${all}</p>` : ''}</div>`;
+    return `<div class="wrap"><div class="res-lead res-lead--triptych${few}">${p.images.slice(0, 3).map((img, i) => btn(img, i, leadSizes(p))).join('')}</div>${bar}</div>`;
   }
   const compact = p.images[0].width < 1100 ? ' res-lead--compact' : '';
-  return `<div class="wrap"><div class="res-lead${compact}">${btn(p.images[0], 0, '(min-width: 1080px) 62vw, 100vw', 'res-lead__img')}
-    ${n > 1 ? `<div class="res-lead__side">${p.images.slice(1, 3).map((img, i) => btn(img, i + 1, '(min-width: 1080px) 30vw, 50vw')).join('')}</div>` : ''}</div>${all ? `<p class="res-lead__bar">${all}</p>` : ''}</div>`;
+  // A lone photograph spans the lead, enlarged at most 1.3 times (as house pages cap their lead).
+  const cap = n === 1 ? ` style="max-width:${Math.round(p.images[0].width * 1.3)}px"` : '';
+  return `<div class="wrap"><div class="res-lead${compact}${few}">${btn(p.images[0], 0, leadSizes(p), 'res-lead__img', cap)}
+    ${n > 1 ? `<div class="res-lead__side">${p.images.slice(1, 3).map((img, i) => btn(img, i + 1, n === 2 ? '(min-width: 768px) 45vw, 100vw' : '(min-width: 1080px) 30vw, 50vw')).join('')}</div>` : ''}</div>${bar}</div>`;
 }
 
 export function residence(S, p) {
@@ -330,10 +342,6 @@ export function residence(S, p) {
 
   ${filmSection(S, p.video, p.images.find(i => i.orientation === 'landscape' && i.width >= 1000) || p.images[1] || lead, title)}
 
-  <section class="section wrap" aria-label="Photographs">
-    ${gallery(p.images, { title, startAt: 3 })}
-  </section>
-
   ${avail && agents.length ? `<section class="section wrap res-agents" id="agent" aria-labelledby="agent-h">
     <h2 id="agent-h" class="subhead">Listing agent${agents.length > 1 ? 's' : ''}</h2>
     <div class="agents">${agents.map(a => agentCard(S, a)).join('')}</div>
@@ -353,7 +361,7 @@ export function residence(S, p) {
 ${avail ? ctaBand(S, { title: 'Arrange a viewing', text: `${agents.map(a => a.name).join(' and ')} of ${p.agency} ${agents.length > 1 ? 'are' : 'is'} the listing ${agents.length > 1 ? 'agents' : 'agent'} for this home.`,
     primary: primaryAgent ? `<a class="btn btn--primary" href="${tel(primaryAgent.phone)}">Call ${esc(primaryAgent.name.split(' ')[0])}</a>` : '',
     secondary: primaryAgent ? `<a class="btn btn--secondary" href="${mailto(primaryAgent.email, `Viewing request: ${infoSubject}`)}">Email ${esc(primaryAgent.name.split(' ')[0])}</a>` : '' }) : ''}`;
-  return layout(S, { title: `${title}${p.city ? `, ${p.city}` : ''}`, path: `/residences/${p.slug}/`, section: 'residences', body, image: lead, preload: lead, preloadSizes: lead.orientation === 'portrait' ? '(min-width: 768px) 33vw, 100vw' : '(min-width: 1080px) 62vw, 100vw',
+  return layout(S, { title: `${title}${p.city ? `, ${p.city}` : ''}`, path: `/residences/${p.slug}/`, section: 'residences', body, image: lead, preload: lead, preloadSizes: leadSizes(p),
     description: avail ? `${tidy(p.lede || title)} ${priceLine(p)}.` : `${tidy(title)}, ${placeLine(p)}. ${statusText(p, { long: true })}`,
     jsonld: avail ? { '@context': 'https://schema.org', '@type': 'RealEstateListing', name: tidy(title), url: p.sourceListingUrl,
       offers: { '@type': 'Offer', price: p.priceZAR, priceCurrency: 'ZAR', availability: 'https://schema.org/InStock' } } : null });
