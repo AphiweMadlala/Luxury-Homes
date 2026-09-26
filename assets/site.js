@@ -56,7 +56,7 @@
       i = (n + items.length) % items.length;
       const it = items[i];
       img.removeAttribute('srcset'); img.src = it.src; img.srcset = it.srcset; img.sizes = '100vw'; img.alt = it.alt;
-      img.width = it.w; img.height = it.h; img.style.maxWidth = it.w + 'px';
+      img.width = it.w; img.height = it.h; img.style.maxWidth = `min(100%, ${it.w}px)`; // never beyond the stage, never enlarged
       count.textContent = `${i + 1} of ${items.length}`;
       [items[i + 1], items[i - 1]].forEach(p => { if (p) { const pre = new Image(); pre.srcset = p.srcset; pre.sizes = '100vw'; } });
     };

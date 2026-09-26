@@ -216,13 +216,20 @@ async function interactions(browser, name) {
     T(await p.evaluate(() => !!document.activeElement.closest('.lightbox')), tag('lightbox traps focus'));
     await p.keyboard.press('Escape');
     T(!(await vis('.lightbox')) && await p.evaluate(() => document.activeElement.matches('[data-lightbox="1"]')), tag('Escape closes lightbox, focus restored'));
-    // The opening gallery is the only gallery; its control opens the complete set.
+    // The opening gallery is the only gallery; its control opens the complete set in a dialog that fits.
     const total = await p.evaluate(() => JSON.parse(document.querySelector('[data-lightbox-data]').textContent).length);
     T(await p.locator('.residence .plates, .mosaic').count() === 0, tag('residence has a single gallery'));
     await p.locator('.res-lead__all').click();
     T((await p.locator('.res-lead__all').textContent()).trim() === `${total} photographs` && (await p.locator('.lightbox__count').textContent()) === `1 of ${total}`, tag('photographs control opens the complete set'));
-    await p.keyboard.press('Escape');
-    T(!(await vis('.lightbox')) && await p.evaluate(() => document.activeElement.matches('.res-lead__all')), tag('Escape restores focus to the control'));
+    await p.waitForFunction(() => document.querySelector('.lightbox__stage img').complete);
+    T(await p.evaluate(() => {
+      const r = s => document.querySelector(s).getBoundingClientRect();
+      const st = r('.lightbox__stage'), im = r('.lightbox__stage img'), x = r('[data-lb-close]');
+      return x.right <= innerWidth && im.left >= st.left - 1 && im.right <= st.right + 1 && im.top >= st.top - 1 && im.bottom <= st.bottom + 1;
+    }), tag('lightbox photograph and close button fit the viewport'));
+    const closed = await p.locator('[data-lb-close]').click({ timeout: 5000 }).then(() => true, () => false);
+    T(closed && !(await vis('.lightbox')) && await p.evaluate(() => document.activeElement.matches('.res-lead__all')), tag('close button restores focus to the control'));
+    if (await vis('.lightbox')) await p.keyboard.press('Escape');
     // Agent-first actions.
     const primary = await p.locator('.res-head .btn--primary').getAttribute('href');
     const agentMail = await p.locator('.agent [data-agent-email]').first().getAttribute('href');

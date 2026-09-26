@@ -216,7 +216,8 @@ the fold on house pages.
 House pages only. Singles only for landscapes of 1100px or more; other landscapes pair
 (cropped to 3:2 so pairs align); portraits run in threes (4:5). A lone final image folds
 into the row before it. Opens a lightbox dialog (focus trap, Escape, arrow keys, swipe,
-focus restoration, scroll lock).
+focus restoration, scroll lock); the photograph always fits the dialog and is never
+enlarged beyond its source.
 
 ### `residence-lead`
 A residence page has one gallery, its lead: 2/3 + stacked side pair for landscapes, a
